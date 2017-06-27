@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import AppKit
 
 enum MNISTDataError: Error {
     case invalidMagicNumber
@@ -94,7 +95,8 @@ func loadMNISTImageSet(imageFile: MNISTFiles, labelFile: MNISTFiles) throws -> [
         throw MNISTDataError.mismatchingLabelsAndImages
     }
     
-    let labels = data.map {
+    
+    let labels = data.subdata(in: 8..<data.count).map {
         Int($0)
     }
     
@@ -108,4 +110,30 @@ func loadMNISTImageSet(imageFile: MNISTFiles, labelFile: MNISTFiles) throws -> [
     }
     
     return images
+}
+
+func imageFromMNISTImage(_ mnistImage: MNISTImage) -> NSImage {
+    let imageRep = NSBitmapImageRep(bitmapDataPlanes: nil,
+                                    pixelsWide: mnistImage.size.width,
+                                    pixelsHigh: mnistImage.size.height,
+                                    bitsPerSample: 8,
+                                    samplesPerPixel: 1,
+                                    hasAlpha: false,
+                                    isPlanar: false,
+                                    colorSpaceName: .calibratedWhite,
+                                    bytesPerRow: 0,
+                                    bitsPerPixel: 8)!
+    
+    let rowBytes = imageRep.bytesPerRow
+    let pixels = imageRep.bitmapData
+    
+    for i in 0..<(mnistImage.size.width * mnistImage.size.height) {
+        let y = i / mnistImage.size.width
+        let x = i - (y * mnistImage.size.width)
+        pixels?.advanced(by: y * rowBytes + x).pointee = 255 - mnistImage.pixels[i]
+    }
+    
+    let image = NSImage(size: NSSize(width: mnistImage.size.width, height: mnistImage.size.height))
+    image.addRepresentation(imageRep)
+    return image
 }
